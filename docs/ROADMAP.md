@@ -8,7 +8,7 @@ Quy ước trạng thái:
 - `NEXT`: việc đang làm tiếp theo.
 - `PLANNED`: chưa triển khai.
 
-## 1. Project, Configuration và Bootstrap — NEXT
+## 1. Project, Configuration và Bootstrap — DONE
 
 - Khởi tạo NestJS + TypeScript.
 - Chuẩn hóa cấu trúc thư mục.
@@ -16,11 +16,11 @@ Quy ước trạng thái:
 - Validate biến môi trường bằng Joi.
 - Thiết lập bootstrap và shutdown hooks.
 
-## 2. Hạ tầng HTTP dùng chung — PLANNED
+## 2. Hạ tầng HTTP dùng chung — NEXT
 
-- Validation.
-- Success/error response.
-- Request ID và logging.
+- Validation.- done
+- Request ID và logging. - done
+- Success/error response. 
 - CORS, Helmet, cookie parser, rate limit.
 - Pagination dùng chung.
 - Thiết lập Swagger/OpenAPI.

@@ -10,4 +10,16 @@ export const environmentValidationSchema: Joi.ObjectSchema = Joi.object({
     .min(1)
     .max(65535)
     .default(3000),
+
+  LOG_LEVEL: Joi.string()
+    .valid(
+      'fatal',
+      'error',
+      'warn',
+      'info',
+      'debug',
+      'trace',
+      'silent',
+    )
+    .default('info'),
 });
