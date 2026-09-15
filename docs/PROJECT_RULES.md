@@ -2013,12 +2013,12 @@ không any
 return type rõ khi phù hợp
 ```
 
-Tên test phải mô tả hành vi.
+Tên test phải mô tả hành vi bằng tiếng việt không dấu.
 
 Ví dụ:
 
 ```ts
-it('should reject a reused refresh token', async () => {
+it('.........................', async () => {
 });
 ```
 
