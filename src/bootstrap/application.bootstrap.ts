@@ -3,22 +3,28 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module.js';
-import { setupValidation } from './setup-validation.js';
-import { setupLogger } from './setup-logger.js';
-import { setupResponse } from './setup-response.js';
+import { setupValidation } from './setup/setup-validation.js';
+import { setupLogger } from './setup/setup-logger.js';
+import { setupResponse } from './setup/setup-response.js';
+import { setupHelmet } from './setup/setup-helmet.js';
+import { startServer } from './setup/start-server.js';
+import { setupCors } from './setup/setup-cors.js';
+import { setupCookieParser } from './setup/setup-cookie-parser.js';
 
 export async function bootstrapApplication(): Promise<void> {
 
   const app: INestApplication = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
-  const configService: ConfigService = app.get(ConfigService);
  
   setupLogger(app);
   setupValidation(app);
   setupResponse(app);
+  setupHelmet(app);
+  setupCors(app);
+  setupCookieParser(app);
+
   app.enableShutdownHooks();
-  
-  const port: number = configService.getOrThrow<number>('app.port');
-  await app.listen(port);
+  await startServer(app);
+
 }

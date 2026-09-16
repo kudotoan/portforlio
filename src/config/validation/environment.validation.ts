@@ -22,4 +22,6 @@ export const environmentValidationSchema: Joi.ObjectSchema = Joi.object({
       'silent',
     )
     .default('info'),
+    
+    CORS_ORIGIN: Joi.string().uri().required(),
 });

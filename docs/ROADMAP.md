@@ -20,8 +20,8 @@ Quy ước trạng thái:
 
 - Validation.- done
 - Request ID và logging. - done
-- Success/error response. 
-- CORS, Helmet, cookie parser, rate limit.
+- Success/error response. - done
+- CORS, Helmet, cookie parser, rate limit. - done, rate limit tạm hoãn
 - Pagination dùng chung.
 - Thiết lập Swagger/OpenAPI.
 
