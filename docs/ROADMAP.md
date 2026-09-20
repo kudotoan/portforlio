@@ -30,7 +30,7 @@ Quy ước trạng thái:
 - Swagger/OpenAPI.
 - Rate limit tạm hoãn do chưa phù hợp version hiện tại.
 
-## 3. Database và Prisma — NEXT
+## 3. Database và Prisma — DONE
 
 - MySQL 8+.
 - Cài và cấu hình Prisma 7.
@@ -40,7 +40,7 @@ Quy ước trạng thái:
 - Viết `schema.prisma`.
 - Tạo migration đầu tiên.
 
-## 4. Health — PLANNED
+## 4. Health — DONE
 
 - `GET /health`.
 - `GET /health/live`.
@@ -49,7 +49,7 @@ Quy ước trạng thái:
 - Readiness kiểm tra MySQL.
 - Test health/readiness.
 
-## 5. Seed dữ liệu hệ thống — PLANNED
+## 5. Seed dữ liệu hệ thống — DONE
 
 - Tạo Admin đầu tiên với role `OWNER`.
 - Tạo Profile mặc định có `id = "default"`.
@@ -57,7 +57,7 @@ Quy ước trạng thái:
 - Thiết lập `mustChangePassword`.
 - Seed phải chạy an toàn nhiều lần khi phù hợp.
 
-## 6. Authentication và Authorization — PLANNED
+## 6. Authentication và Authorization — NEXT
 
 - Hoàn thiện DTO và response model Auth.
 - Login.
