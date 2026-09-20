@@ -35,4 +35,28 @@ export const environmentValidationSchema: Joi.ObjectSchema = Joi.object({
     
     RATE_LIMIT_TTL_MS: Joi.number().integer().positive().required(),
     RATE_LIMIT_LIMIT: Joi.number().integer().positive().required(),
+
+    JWT_ACCESS_PRIVATE_KEY_PATH: Joi.string().trim().required(),
+
+    JWT_ACCESS_PUBLIC_KEY_PATH: Joi.string().trim().required(),
+
+    JWT_ACCESS_ISSUER: Joi.string().trim().required(),
+
+    JWT_ACCESS_AUDIENCE: Joi.string().trim().required(),
+
+    JWT_ACCESS_TTL_SECONDS: Joi.number().integer().positive().required(),
+
+    REFRESH_IDLE_TTL_SECONDS: Joi.number().integer().positive().required(),
+
+    REFRESH_FAMILY_TTL_SECONDS: Joi.number().integer().positive().required(),
+
+    REFRESH_COOKIE_NAME: Joi.string().trim().required(),
+
+    REFRESH_COOKIE_PATH: Joi.string().trim().required(),
+
+    REFRESH_COOKIE_SECURE: Joi.boolean().required(),
+
+    REFRESH_COOKIE_SAME_SITE: Joi.string().valid('strict', 'lax', 'none').required(),
+
+    AUTH_ALLOWED_ORIGINS: Joi.string().trim().required(),
 });

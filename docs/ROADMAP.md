@@ -81,6 +81,16 @@ Quy ước trạng thái:
 - Origin/CSRF protection cho cookie-authenticated route.
 - Test Auth.
 
+
+1. auth contract + config — DONE
+2. crypto/token primitives — DONE
+3. repository + transaction — DONE
+4. login — DONE
+5. refresh rotation + reuse detection — DONE
+6. JWT/current-admin/role/password guards - NEXT
+7. me/change-password/logout/deactivation
+8. origin-CSRF + security tests
+
 ## 7. Media — PLANNED
 
 - Hoàn thiện Media API contract.

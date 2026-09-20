@@ -7,12 +7,13 @@ import { loggerConfig } from './namespaces/logger.config.js';
 import { corsConfig } from './namespaces/cors.config.js';
 import { databaseConfig } from './namespaces/database.config.js';
 import { rateLimitConfig } from './namespaces/rate-limit.config.js';
+import { authConfig } from './namespaces/auth.config.js';
 
 @Module({
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, loggerConfig, corsConfig, databaseConfig, rateLimitConfig],
+      load: [appConfig, loggerConfig, corsConfig, databaseConfig, rateLimitConfig, authConfig],
       validationSchema: environmentValidationSchema,
     }),
   ],

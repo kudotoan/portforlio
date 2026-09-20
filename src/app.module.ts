@@ -6,6 +6,7 @@ import { ApplicationLoggerModule } from './common/logger/application-logger.modu
 import { PrismaModule } from './database/prisma.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
     PrismaModule,
     HealthModule,
     RateLimitModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
