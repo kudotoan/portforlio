@@ -32,4 +32,7 @@ export const environmentValidationSchema: Joi.ObjectSchema = Joi.object({
     DATABASE_PASSWORD: Joi.string().required(),
     DATABASE_NAME: Joi.string().required(),
     DATABASE_CONNECTION_LIMIT: Joi.number().integer().min(1).default(10),
+    
+    RATE_LIMIT_TTL_MS: Joi.number().integer().positive().required(),
+    RATE_LIMIT_LIMIT: Joi.number().integer().positive().required(),
 });

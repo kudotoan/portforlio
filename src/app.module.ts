@@ -5,6 +5,7 @@ import { ConfigurationModule } from './config/config.module.js';
 import { ApplicationLoggerModule } from './common/logger/application-logger.module.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { HealthModule } from './modules/health/health.module.js';
     ApplicationLoggerModule,
     PrismaModule,
     HealthModule,
+    RateLimitModule,
   ],
   controllers: [AppController],
   providers: [AppService],

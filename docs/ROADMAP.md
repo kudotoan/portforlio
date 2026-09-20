@@ -17,7 +17,7 @@ Quy ước trạng thái:
 - Tách bootstrap theo chức năng.
 - Thiết lập shutdown hooks.
 
-## 2. Hạ tầng HTTP dùng chung — PLANNED
+## 2. Hạ tầng HTTP dùng chung — DONE
 
 - Global ValidationPipe.
 - Success response interceptor.
@@ -28,7 +28,7 @@ Quy ước trạng thái:
 - Cookie parser.
 - Pagination dùng chung.
 - Swagger/OpenAPI.
-- Rate limit tạm hoãn do chưa phù hợp version hiện tại.
+- Rate limit 
 
 ## 3. Database và Prisma — DONE
 
