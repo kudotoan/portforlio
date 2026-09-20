@@ -4,7 +4,11 @@ Tài liệu này khóa các quyết định kiến trúc và kỹ thuật của 
 
 Nếu code khác tài liệu này, phải sửa code hoặc cập nhật tài liệu có chủ ý. Không để nhiều cách tổ chức cùng tồn tại cho cùng một vấn đề.
 
-`PROJECT_RULES.md` là luật gốc về coding style, naming và nguyên tắc tổ chức source. File này tập trung vào kiến trúc tổng thể và các quyết định kỹ thuật lớn.
+`PROJECT_RULES.md` là luật gốc về coding style, naming và nguyên tắc tổ chức source.
+
+`DATA_MODEL.md` là nguồn quyết định nghiệp vụ cho `prisma/schema.prisma`, quan hệ dữ liệu, ràng buộc và migration.
+
+File này tập trung vào kiến trúc tổng thể và các quyết định kỹ thuật lớn.
 
 ---
 
@@ -20,6 +24,9 @@ src/
 ├── database/
 ├── config/
 ├── common/
+├── bootstrap/
+├── validation/
+├── logger/
 ├── app.module.ts
 └── main.ts
 ```
@@ -31,6 +38,9 @@ modules/       = nghiệp vụ của hệ thống
 database/      = kết nối và cấu hình database
 config/        = cấu hình application
 common/        = thành phần thật sự dùng chung
+bootstrap/     = cấu hình khởi động application
+validation/    = validation dùng ở biên application
+logger/        = cấu hình logging
 app.module.ts  = module gốc ghép các module lớn
 main.ts        = điểm khởi động application
 ```
@@ -62,11 +72,13 @@ src/modules/
 ├── categories/
 ├── artworks/
 ├── profile/
-├── theme/
 ├── gallery/
-├── analytics/
-└── audit/
+└── analytics/
 ```
+
+Dashboard là dữ liệu tổng hợp phục vụ đọc và không có model hoặc bảng riêng.
+
+Có thể đặt xử lý dashboard trong module `analytics/` hoặc tách module đọc riêng nếu sau này logic đủ lớn, nhưng không tạo bảng Dashboard chỉ để phục vụ kiến trúc.
 
 Module nhỏ có thể dùng cấu trúc phẳng:
 
@@ -158,6 +170,7 @@ Service → Prisma
 
 - Database: MySQL 8+.
 - ORM và migration: Prisma 7.
+- `DATA_MODEL.md` là nguồn chuẩn cho model, field, enum, relation, index và referential action.
 - Chỉ có một `PrismaService` dùng chung.
 - `PrismaService` đặt trong `src/database` và được export qua `DatabaseModule`.
 - Repository nhận `PrismaService` bằng dependency injection.
@@ -166,6 +179,8 @@ Service → Prisma
 - Query nên dùng `select` rõ ràng khi không cần toàn bộ record.
 - Thao tác nhiều bước có thể để dữ liệu ở trạng thái dở dang phải chạy trong transaction.
 - Transaction database đặt trong Repository khi nhiều thao tác Prisma phải thành công hoặc thất bại cùng nhau.
+- Không dùng soft delete trong schema hiện tại.
+- `DELETE` là hard delete và phải tuân thủ điều kiện nghiệp vụ, foreign key và referential action trong `DATA_MODEL.md`.
 - Development dùng `prisma migrate dev`.
 - Staging/production dùng `prisma migrate deploy`.
 - Migration đã chạy không được sửa; thay đổi schema phải tạo migration mới.
@@ -256,9 +271,12 @@ Repository chịu trách nhiệm:
 - Query database.
 - Insert/update/delete dữ liệu.
 - Transaction database.
+- Thực hiện các thao tác nhiều record cần atomicity.
 - Map Prisma data sang model nội bộ.
 
 Repository không chứa các quyết định nghiệp vụ không liên quan trực tiếp đến lưu trữ dữ liệu.
+
+Các thao tác reorder, rotation refresh token và mutation nhiều record phải thực hiện transaction theo quy tắc trong `DATA_MODEL.md`.
 
 ---
 
@@ -290,8 +308,12 @@ export type RefreshSession = {
   adminUserId: string;
   tokenHash: string;
   familyId: string;
+  familyExpiresAt: Date;
   expiresAt: Date;
   revokedAt: Date | null;
+  revokedReason: string | null;
+  replacedById: string | null;
+  lastUsedAt: Date | null;
 };
 ```
 
@@ -350,10 +372,12 @@ Không biến `common/` thành nơi chứa mọi file khó phân loại.
 
 # 11. Authentication
 
-Đối tượng đăng nhập V1:
+Đối tượng đăng nhập hiện tại:
 
-- Chỉ có Admin được tạo bằng seed.
+- Chỉ có Admin được tạo bằng seed hoặc nghiệp vụ quản trị nội bộ.
 - Không có API đăng ký public.
+- Admin có role `OWNER` hoặc `EDITOR`.
+- Admin đầu tiên được seed với role `OWNER`.
 
 Access token:
 
@@ -375,15 +399,18 @@ Refresh token rotation:
 - Mỗi lần refresh thành công revoke token/session cũ và tạo token/session mới.
 - `sid` là ID của refresh-session row hiện tại và thay đổi sau mỗi rotation.
 - `familyId` ổn định trong một lần login trên một thiết bị/trình duyệt.
-- Reuse token đã rotate phải được phát hiện và revoke toàn bộ token family theo policy hiện tại.
-- Idle TTL mục tiêu: 7 ngày và được tính lại sau refresh hợp lệ.
-- Absolute session TTL mục tiêu: tối đa 90 ngày tính từ lúc login và không được gia hạn.
+- `familyExpiresAt` cố định từ lúc login và không được gia hạn.
+- Reuse token đã rotate hoặc revoke phải được phát hiện và revoke toàn bộ token family.
+- Idle TTL: 7 ngày và được tính lại sau refresh hợp lệ nhưng không vượt quá `familyExpiresAt`.
+- Absolute session TTL: tối đa 90 ngày tính từ lúc login và không được gia hạn.
 
 Protected Admin API:
 
 - Verify JWT signature và các claim bắt buộc.
 - Kiểm tra refresh session theo `sid` trong database.
+- Kiểm tra session chưa revoke và chưa hết hạn.
 - Kiểm tra Admin còn active.
+- Kiểm tra quyền theo role khi endpoint yêu cầu.
 - Redis nếu được thêm sau này chỉ là tối ưu, không thay đổi contract.
 
 Logout:
@@ -398,6 +425,8 @@ Logout:
 - Đặt `mustChangePassword = false` khi phù hợp.
 - Revoke mọi refresh session của Admin.
 - Xóa refresh cookie và yêu cầu đăng nhập lại.
+
+Khi Admin bị vô hiệu hóa, toàn bộ refresh token family của Admin phải bị revoke.
 
 Cookie-authenticated route phải kiểm tra Origin. Nếu deployment cần `SameSite=None`, phải có CSRF protection phù hợp.
 
@@ -418,11 +447,10 @@ Cookie-authenticated route phải kiểm tra Origin. Nếu deployment cần `Sam
 
 # 13. HTTP và response
 
-- API prefix mặc định: `/api/v1`.
-- Health route không dùng product prefix.
 - Request được validate tại HTTP boundary bằng DTO.
 - Field không khai báo bị từ chối.
 - Controller trả dữ liệu nghiệp vụ; response interceptor chịu trách nhiệm bọc success envelope khi endpoint có body.
+- `DELETE` thành công trả `204 No Content` nếu endpoint không cần response body.
 - `204 No Content` không có response body.
 - Error response phải có machine-readable error code ổn định cho frontend.
 - Không trả stack trace, Prisma error, SQL, secret hoặc credential ra client.
@@ -431,16 +459,65 @@ Chi tiết endpoint và response contract được khóa tại `API_CONTRACT.md`
 
 ---
 
-# 14. Logging và request tracing
+# 14. Media và object storage
+
+- `MediaAsset` chỉ lưu metadata và storage key; không lưu public URL cố định.
+- MediaAsset là immutable.
+- Upload phải validate MIME type, magic bytes, dung lượng, kích thước ảnh và checksum.
+- Thumbnail được tạo trong luồng upload.
+- Upload trùng checksum trả lại asset đã tồn tại.
+- MediaAsset chỉ được hard delete khi không còn reference.
+- Database transaction và object storage không dùng chung transaction.
+- Khi xóa MediaAsset, database record được xóa trước; object storage được cleanup sau bằng thao tác idempotent.
+- Cleanup storage thất bại phải được log và retry.
+
+---
+
+# 15. Analytics và Dashboard
+
+- Analytics lưu raw `AnalyticsEvent`.
+- Không lưu IP, full user-agent, cookie, fingerprint, email hoặc dữ liệu nhận diện người dùng.
+- `eventId` do client tạo và dùng để chống ghi trùng.
+- Không tạo bảng aggregate/cache trong phiên bản đầu tiên.
+- Dashboard tổng hợp trực tiếp từ dữ liệu hiện có và raw AnalyticsEvent.
+- Raw AnalyticsEvent được giữ 400 ngày rồi hard delete bằng background cleanup.
+- Nếu nhu cầu hiệu năng xuất hiện sau này mới xem xét aggregate/cache bằng migration mới.
+
+---
+
+# 16. Background jobs
+
+Background job chỉ được thêm khi có nhu cầu nghiệp vụ thực tế.
+
+Các job hiện được Data Model yêu cầu:
+
+```text
+cleanup RefreshTokenSession hết thời gian retention
+cleanup AnalyticsEvent quá 400 ngày
+đối soát và cleanup object storage mồ côi
+```
+
+Quy tắc:
+
+- Xử lý theo batch.
+- Có retry/backoff khi phù hợp.
+- Thao tác phải idempotent nếu có thể.
+- Không tạo side effect trùng khi job chạy lại.
+
+---
+
+# 17. Logging và request tracing
 
 - Dùng Pino làm logger thống nhất.
 - Không dùng `console.log()` hoặc `console.error()` trong production code.
 - Request có `requestId` để đối chiếu client và log.
 - Không log password, passwordHash, raw refresh token, access token, JWT secret, private key hoặc authentication cookie.
 
+Logging phục vụ vận hành và chẩn đoán hệ thống; không có bảng `AuditLog` trong Data Model hiện tại.
+
 ---
 
-# 15. Testing
+# 18. Testing
 
 Project dùng Vitest.
 
@@ -461,6 +538,10 @@ refresh token reuse detection
 change password
 permission checks
 repository transaction
+hard delete constraints
+reorder
+publish rules
+analytics deduplication
 health/readiness
 ```
 
@@ -468,7 +549,7 @@ Không mock mọi thứ một cách máy móc.
 
 ---
 
-# 16. Nguyên tắc thay đổi kiến trúc
+# 19. Nguyên tắc thay đổi kiến trúc
 
 Không thêm abstraction chỉ vì pattern phổ biến.
 
@@ -492,12 +573,12 @@ Nếu kiến trúc cần thay đổi:
 
 1. Nêu rõ vấn đề hiện tại.
 2. Giải thích vì sao cấu trúc hiện tại không còn phù hợp.
-3. Cập nhật `PROJECT_RULES.md` hoặc file kiến trúc liên quan trước hoặc cùng lúc với code.
+3. Cập nhật `PROJECT_RULES.md`, `DATA_MODEL.md` hoặc file kiến trúc liên quan trước hoặc cùng lúc với code.
 4. Không để hai pattern song song cho cùng một loại nghiệp vụ.
 
 ---
 
-# 17. Công thức cần nhớ
+# 20. Công thức cần nhớ
 
 ```text
 Request

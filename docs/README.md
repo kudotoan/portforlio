@@ -77,18 +77,6 @@ Mặc định API chạy tại:
 http://localhost:3000
 ```
 
-Product API sử dụng prefix:
-
-```text
-/api/v1
-```
-
-Ví dụ:
-
-```text
-http://localhost:3000/api/v1
-```
-
 ## Kiểm tra project
 
 Chạy lint:

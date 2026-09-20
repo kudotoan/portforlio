@@ -5,12 +5,13 @@ import { appConfig } from './namespaces/app.config.js';
 import { environmentValidationSchema } from './validation/environment.validation.js';
 import { loggerConfig } from './namespaces/logger.config.js';
 import { corsConfig } from './namespaces/cors.config.js';
+import { databaseConfig } from './namespaces/database.config.js';
 
 @Module({
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, loggerConfig, corsConfig],
+      load: [appConfig, loggerConfig, corsConfig, databaseConfig],
       validationSchema: environmentValidationSchema,
     }),
   ],

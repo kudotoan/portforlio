@@ -24,4 +24,12 @@ export const environmentValidationSchema: Joi.ObjectSchema = Joi.object({
     .default('info'),
     
     CORS_ORIGIN: Joi.string().uri().required(),
+    
+    DATABASE_URL: Joi.string().required(),
+    DATABASE_HOST: Joi.string().required(),
+    DATABASE_PORT: Joi.number().port().default(3306),
+    DATABASE_USER: Joi.string().required(),
+    DATABASE_PASSWORD: Joi.string().required(),
+    DATABASE_NAME: Joi.string().required(),
+    DATABASE_CONNECTION_LIMIT: Joi.number().integer().min(1).default(10),
 });

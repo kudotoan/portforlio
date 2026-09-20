@@ -1904,7 +1904,6 @@ Trong `main.ts` chỉ đặt bootstrap/configuration cấp application.
 Ví dụ:
 
 ```text
-global prefix
 global validation pipe
 CORS
 Helmet

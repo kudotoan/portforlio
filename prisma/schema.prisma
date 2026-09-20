@@ -1,0 +1,214 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// Initial-migration requirements that Prisma Schema Language cannot represent:
+// - use utf8mb4 with utf8mb4_0900_ai_ci for every table;
+// - add the singleton and revocation-pair CHECK constraints documented below.
+
+enum AdminRole {
+  OWNER
+  EDITOR
+}
+
+enum RefreshTokenRevokedReason {
+  ROTATED
+  LOGOUT
+  PASSWORD_CHANGED
+  REUSE_DETECTED
+  ADMIN_DISABLED
+}
+
+enum ArtworkStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+  ARCHIVED
+}
+
+enum AnalyticsEventType {
+  SITE_VIEW
+  ARTWORK_VIEW
+}
+
+model AdminUser {
+  id                 String                @id @default(uuid()) @db.Char(36)
+  username           String                @unique @db.VarChar(50)
+  passwordHash       String                @db.VarChar(255)
+  role               AdminRole             @default(EDITOR)
+  isActive           Boolean               @default(true)
+  mustChangePassword Boolean               @default(true)
+  createdAt          DateTime              @default(now()) @db.DateTime(3)
+  updatedAt          DateTime              @default(now()) @updatedAt @db.DateTime(3)
+  refreshSessions    RefreshTokenSession[]
+}
+
+/// Revocation fields describe token security state; they are not soft-delete fields.
+/// The first migration must add a CHECK so revokedAt and revokedReason are either both
+/// NULL or both non-NULL because Prisma Schema Language cannot express this constraint.
+model RefreshTokenSession {
+  id              String                     @id @default(uuid()) @db.Char(36)
+  adminUserId     String                     @db.Char(36)
+  tokenHash       String                     @unique @db.Char(64)
+  familyId        String                     @db.Char(36)
+  familyExpiresAt DateTime                   @db.DateTime(3)
+  expiresAt       DateTime                   @db.DateTime(3)
+  revokedAt       DateTime?                  @db.DateTime(3)
+  revokedReason   RefreshTokenRevokedReason?
+  replacedById    String?                    @unique @db.Char(36)
+  lastUsedAt      DateTime?                  @db.DateTime(3)
+  createdAt       DateTime                   @default(now()) @db.DateTime(3)
+  adminUser       AdminUser                  @relation(fields: [adminUserId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  replacedBy      RefreshTokenSession?       @relation("RefreshTokenReplacement", fields: [replacedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  replaces        RefreshTokenSession?       @relation("RefreshTokenReplacement")
+
+  @@index([familyId])
+  @@index([familyExpiresAt])
+  @@index([expiresAt])
+  @@index([adminUserId, familyId])
+  @@index([adminUserId, revokedAt])
+}
+
+model Category {
+  id          String            @id @default(uuid()) @db.Char(36)
+  name        String            @db.VarChar(100)
+  slug        String            @unique @db.VarChar(120)
+  description String?           @db.Text
+  position    Int               @unique @db.UnsignedInt
+  createdAt   DateTime          @default(now()) @db.DateTime(3)
+  updatedAt   DateTime          @default(now()) @updatedAt @db.DateTime(3)
+  artworks    ArtworkCategory[]
+}
+
+model Artwork {
+  id          String            @id @default(uuid()) @db.Char(36)
+  title       String            @db.VarChar(160)
+  slug        String            @unique @db.VarChar(180)
+  description String?           @db.Text
+  status      ArtworkStatus     @default(DRAFT)
+  isFeatured  Boolean           @default(false)
+  position    Int               @unique @db.UnsignedInt
+  publishedAt DateTime?         @db.DateTime(3)
+  createdAt   DateTime          @default(now()) @db.DateTime(3)
+  updatedAt   DateTime          @default(now()) @updatedAt @db.DateTime(3)
+  categories  ArtworkCategory[]
+  images      ArtworkImage[]
+  events      AnalyticsEvent[]
+
+  @@index([status])
+  @@index([isFeatured])
+  @@index([publishedAt])
+}
+
+model ArtworkCategory {
+  artworkId  String   @db.Char(36)
+  categoryId String   @db.Char(36)
+  artwork    Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([artworkId, categoryId])
+  @@index([categoryId, artworkId])
+}
+
+model MediaAsset {
+  id                  String         @id @default(uuid()) @db.Char(36)
+  storageKey          String         @unique @db.VarChar(512)
+  thumbnailStorageKey String?        @unique @db.VarChar(512)
+  originalName        String         @db.VarChar(255)
+  mimeType            String         @db.VarChar(100)
+  sizeBytes           Int            @db.UnsignedInt
+  width               Int            @db.UnsignedInt
+  height              Int            @db.UnsignedInt
+  checksumSha256      String         @unique @db.Char(64)
+  createdAt           DateTime       @default(now()) @db.DateTime(3)
+  artworkImages       ArtworkImage[]
+  profiles            Profile[]
+  galleryImages       GalleryImage[]
+}
+
+model ArtworkImage {
+  artworkId    String     @db.Char(36)
+  mediaAssetId String     @db.Char(36)
+  position     Int        @db.UnsignedInt
+  altText      String?    @db.VarChar(255)
+  artwork      Artwork    @relation(fields: [artworkId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([artworkId, mediaAssetId])
+  @@unique([artworkId, position])
+  @@index([mediaAssetId])
+}
+
+/// Profile is a singleton. The first migration must add CHECK (id = 'default')
+/// because Prisma Schema Language cannot express this constraint.
+model Profile {
+  id            String       @id @default("default") @db.VarChar(20)
+  name          String       @db.VarChar(120)
+  bio           String?      @db.Text
+  avatarMediaId String?      @db.Char(36)
+  createdAt     DateTime     @default(now()) @db.DateTime(3)
+  updatedAt     DateTime     @default(now()) @updatedAt @db.DateTime(3)
+  avatarMedia   MediaAsset?  @relation(fields: [avatarMediaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  skills        Skill[]
+  socialLinks   SocialLink[]
+
+  @@index([avatarMediaId])
+}
+
+model Skill {
+  id        String   @id @default(uuid()) @db.Char(36)
+  profileId String   @default("default") @db.VarChar(20)
+  name      String   @db.VarChar(100)
+  position  Int      @db.UnsignedInt
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(3)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([profileId, name])
+  @@unique([profileId, position])
+}
+
+model SocialLink {
+  id        String   @id @default(uuid()) @db.Char(36)
+  profileId String   @default("default") @db.VarChar(20)
+  platform  String   @db.VarChar(50)
+  url       String   @db.VarChar(2048)
+  position  Int      @db.UnsignedInt
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(3)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([profileId, platform])
+  @@unique([profileId, position])
+}
+
+model GalleryImage {
+  id           String     @id @default(uuid()) @db.Char(36)
+  mediaAssetId String     @unique @db.Char(36)
+  altText      String?    @db.VarChar(255)
+  caption      String?    @db.VarChar(500)
+  position     Int        @unique @db.UnsignedInt
+  createdAt    DateTime   @default(now()) @db.DateTime(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @db.DateTime(3)
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+}
+
+model AnalyticsEvent {
+  eventId    String             @id @db.Char(36)
+  eventType  AnalyticsEventType
+  artworkId  String?            @db.Char(36)
+  occurredAt DateTime           @db.DateTime(3)
+  createdAt  DateTime           @default(now()) @db.DateTime(3)
+  artwork    Artwork?           @relation(fields: [artworkId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([occurredAt])
+  @@index([createdAt])
+  @@index([eventType, occurredAt])
+  @@index([artworkId, occurredAt])
+}

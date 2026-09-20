@@ -2,18 +2,10 @@
 
 Hợp đồng API của backend Portfolio Art.
 
-Base prefix:
-
-```text
-/api/v1
-```
-
-Health không dùng prefix trên.
-
 ## 1. Quy ước chung
 
-- Public API: `/api/v1/public/**`
-- Admin API: `/api/v1/admin/**`
+- Public API: `/public/**`
+- Admin API: `/admin/**`
 - Admin API, trừ login/refresh, dùng Bearer access token.
 - Refresh token lưu trong HttpOnly cookie.
 - ID dùng `string`.
@@ -21,6 +13,7 @@ Health không dùng prefix trên.
 - Pagination mặc định: `page=1`, `limit=20`, tối đa `100`.
 - Field thừa bị từ chối.
 - `PATCH` không nhận body rỗng.
+- `DELETE` là hard delete.
 - `204 No Content` không có body.
 
 Success response:
@@ -32,7 +25,7 @@ Success response:
   "message": "Request successful",
   "data": {},
   "timestamp": "2026-09-15T00:00:00.000Z",
-  "path": "/api/v1/...",
+  "path": "/admin/...",
   "requestId": "uuid"
 }
 ```
@@ -46,7 +39,7 @@ Error response:
   "message": "Request validation failed",
   "details": [],
   "timestamp": "2026-09-15T00:00:00.000Z",
-  "path": "/api/v1/...",
+  "path": "/admin/...",
   "requestId": "uuid"
 }
 ```
@@ -74,46 +67,50 @@ Quy ước:
 
 | Method | Path | Request | Response |
 |---|---|---|---|
-| POST | `/api/v1/admin/auth/login` | `{ username, password }` | `{ accessToken, admin }` + refresh cookie |
-| POST | `/api/v1/admin/auth/refresh` | Refresh cookie | `{ accessToken }` + refresh cookie mới |
-| POST | `/api/v1/admin/auth/logout` | Refresh cookie | `204` |
-| GET | `/api/v1/admin/auth/me` | Bearer | Admin session |
-| PATCH | `/api/v1/admin/auth/change-password` | `{ currentPassword, newPassword }` | `204` |
+| POST | `/admin/auth/login` | `{ username, password }` | `{ accessToken, admin }` + refresh cookie |
+| POST | `/admin/auth/refresh` | Refresh cookie | `{ accessToken }` + refresh cookie mới |
+| POST | `/admin/auth/logout` | Refresh cookie | `204` |
+| GET | `/admin/auth/me` | Bearer | Admin session |
+| PATCH | `/admin/auth/change-password` | `{ currentPassword, newPassword }` | `204` |
 
 ## 4. Media
 
 | Method | Path |
 |---|---|
-| POST | `/api/v1/admin/media/images` |
-| GET | `/api/v1/admin/media` |
-| GET | `/api/v1/admin/media/:id` |
-| DELETE | `/api/v1/admin/media/:id` |
+| POST | `/admin/media/images` |
+| GET | `/admin/media` |
+| GET | `/admin/media/:id` |
+| DELETE | `/admin/media/:id` |
+
+MediaAsset chỉ được hard delete khi không còn Profile, ArtworkImage hoặc GalleryImage tham chiếu.
 
 ## 5. Categories
 
 | Method | Path |
 |---|---|
-| GET | `/api/v1/admin/categories` |
-| POST | `/api/v1/admin/categories` |
-| PUT | `/api/v1/admin/categories/reorder` |
-| GET | `/api/v1/admin/categories/:id` |
-| PATCH | `/api/v1/admin/categories/:id` |
-| DELETE | `/api/v1/admin/categories/:id` |
+| GET | `/admin/categories` |
+| POST | `/admin/categories` |
+| PUT | `/admin/categories/reorder` |
+| GET | `/admin/categories/:id` |
+| PATCH | `/admin/categories/:id` |
+| DELETE | `/admin/categories/:id` |
+
+Không được hard delete Category nếu thao tác đó làm một Artwork đang `PUBLISHED` không còn Category nào.
 
 ## 6. Artworks
 
 | Method | Path |
 |---|---|
-| GET | `/api/v1/admin/artworks` |
-| POST | `/api/v1/admin/artworks` |
-| PUT | `/api/v1/admin/artworks/reorder` |
-| GET | `/api/v1/admin/artworks/:id` |
-| PATCH | `/api/v1/admin/artworks/:id` |
-| DELETE | `/api/v1/admin/artworks/:id` |
-| PUT | `/api/v1/admin/artworks/:id/categories` |
-| PUT | `/api/v1/admin/artworks/:id/images` |
-| PATCH | `/api/v1/admin/artworks/:id/status` |
-| PATCH | `/api/v1/admin/artworks/:id/featured` |
+| GET | `/admin/artworks` |
+| POST | `/admin/artworks` |
+| PUT | `/admin/artworks/reorder` |
+| GET | `/admin/artworks/:id` |
+| PATCH | `/admin/artworks/:id` |
+| DELETE | `/admin/artworks/:id` |
+| PUT | `/admin/artworks/:id/categories` |
+| PUT | `/admin/artworks/:id/images` |
+| PATCH | `/admin/artworks/:id/status` |
+| PATCH | `/admin/artworks/:id/featured` |
 
 Artwork status:
 
@@ -124,70 +121,105 @@ HIDDEN
 ARCHIVED
 ```
 
+Quy tắc:
+
+- Chỉ được hard delete Artwork khi trạng thái khác `PUBLISHED`.
+- Artwork chuyển sang `PUBLISHED` phải có ít nhất một Category và một ArtworkImage.
+- Ảnh có `position = 0` là ảnh chính.
+- Không được bỏ ảnh cuối cùng khỏi Artwork đang `PUBLISHED`.
+
 ## 7. Profile
 
 | Method | Path |
 |---|---|
-| GET | `/api/v1/admin/profile` |
-| PATCH | `/api/v1/admin/profile` |
-| POST | `/api/v1/admin/profile/skills` |
-| PUT | `/api/v1/admin/profile/skills/reorder` |
-| PATCH | `/api/v1/admin/profile/skills/:id` |
-| DELETE | `/api/v1/admin/profile/skills/:id` |
-| POST | `/api/v1/admin/profile/social-links` |
-| PUT | `/api/v1/admin/profile/social-links/reorder` |
-| PATCH | `/api/v1/admin/profile/social-links/:id` |
-| DELETE | `/api/v1/admin/profile/social-links/:id` |
+| GET | `/admin/profile` |
+| PATCH | `/admin/profile` |
+| POST | `/admin/profile/skills` |
+| PUT | `/admin/profile/skills/reorder` |
+| PATCH | `/admin/profile/skills/:id` |
+| DELETE | `/admin/profile/skills/:id` |
+| POST | `/admin/profile/social-links` |
+| PUT | `/admin/profile/social-links/reorder` |
+| PATCH | `/admin/profile/social-links/:id` |
+| DELETE | `/admin/profile/social-links/:id` |
 
 Profile là singleton `default`.
 
-## 8. Theme
+## 8. Gallery
 
 | Method | Path |
 |---|---|
-| GET | `/api/v1/admin/theme` |
-| PATCH | `/api/v1/admin/theme` |
+| GET | `/admin/gallery-images` |
+| POST | `/admin/gallery-images` |
+| PUT | `/admin/gallery-images/reorder` |
+| PATCH | `/admin/gallery-images/:id` |
+| DELETE | `/admin/gallery-images/:id` |
 
-Theme là singleton `default`.
+Hard delete GalleryImage chỉ xóa row liên kết, không tự xóa MediaAsset.
 
-## 9. Gallery
-
-| Method | Path |
-|---|---|
-| GET | `/api/v1/admin/gallery-images` |
-| POST | `/api/v1/admin/gallery-images` |
-| PUT | `/api/v1/admin/gallery-images/reorder` |
-| PATCH | `/api/v1/admin/gallery-images/:id` |
-| DELETE | `/api/v1/admin/gallery-images/:id` |
-
-## 10. Public API
+## 9. Public API
 
 | Method | Path |
 |---|---|
-| GET | `/api/v1/public/site` |
-| GET | `/api/v1/public/profile` |
-| GET | `/api/v1/public/theme` |
-| GET | `/api/v1/public/categories` |
-| GET | `/api/v1/public/categories/:slug` |
-| GET | `/api/v1/public/artworks` |
-| GET | `/api/v1/public/artworks/:slug` |
-| GET | `/api/v1/public/gallery` |
-| POST | `/api/v1/public/analytics/events` |
+| GET | `/public/site` |
+| GET | `/public/profile` |
+| GET | `/public/categories` |
+| GET | `/public/categories/:slug` |
+| GET | `/public/artworks` |
+| GET | `/public/artworks/:slug` |
+| GET | `/public/gallery` |
+| POST | `/public/analytics/events` |
 
-Public API không trả dữ liệu draft, hidden, archived, deleted hoặc field nội bộ.
+Public API chỉ trả dữ liệu được phép công khai và không trả Artwork có trạng thái `DRAFT`, `HIDDEN`, `ARCHIVED` hoặc field nội bộ.
 
-## 11. Dashboard, Analytics và Audit
+Analytics event:
+
+```text
+SITE_VIEW
+ARTWORK_VIEW
+```
+
+Quy tắc:
+
+- `eventId` là UUID do client tạo và dùng để chống ghi trùng.
+- `SITE_VIEW` phải có `artworkId = null`.
+- `ARTWORK_VIEW` phải có `artworkId` hợp lệ.
+- `occurredAt` không được cũ hơn 24 giờ và không vượt quá thời gian server 5 phút.
+- Không lưu IP, user-agent đầy đủ, cookie, fingerprint, email hoặc dữ liệu nhận diện người dùng.
+
+## 10. Dashboard và Analytics
 
 | Method | Path |
 |---|---|
-| GET | `/api/v1/admin/dashboard/summary` |
-| GET | `/api/v1/admin/analytics/overview` |
-| GET | `/api/v1/admin/analytics/trend` |
-| GET | `/api/v1/admin/analytics/artworks` |
-| GET | `/api/v1/admin/analytics/artworks/:id` |
-| GET | `/api/v1/admin/audit-logs` |
+| GET | `/admin/dashboard/summary` |
+| GET | `/admin/analytics/overview` |
+| GET | `/admin/analytics/trend` |
+| GET | `/admin/analytics/artworks` |
+| GET | `/admin/analytics/artworks/:id` |
 
 Date range dùng `YYYY-MM-DD`, tối đa 366 ngày.
+
+Dashboard và Analytics tổng hợp trực tiếp từ dữ liệu hiện có và raw `AnalyticsEvent`; không có bảng aggregate/cache riêng trong phiên bản đầu tiên.
+
+## 11. Quy tắc reorder
+
+Các endpoint reorder áp dụng cho:
+
+```text
+Category
+Artwork
+ArtworkImage
+Skill
+SocialLink
+GalleryImage
+```
+
+Quy tắc:
+
+- `position` bắt đầu từ `0` và liên tục trong từng scope.
+- Client gửi đầy đủ danh sách ID trong scope theo thứ tự mong muốn.
+- Server từ chối danh sách thiếu ID, thừa ID, trùng ID hoặc chứa ID ngoài scope.
+- Reorder cập nhật toàn bộ scope trong một transaction.
 
 ## 12. Quy tắc frontend
 
