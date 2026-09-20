@@ -10,6 +10,7 @@ import { setupHelmet } from './setup/setup-helmet.js';
 import { startServer } from './setup/start-server.js';
 import { setupCors } from './setup/setup-cors.js';
 import { setupCookieParser } from './setup/setup-cookie-parser.js';
+import { setupOpenApi } from './setup/setup-openapi.js';
 
 export async function bootstrapApplication(): Promise<void> {
 
@@ -23,7 +24,8 @@ export async function bootstrapApplication(): Promise<void> {
   setupHelmet(app);
   setupCors(app);
   setupCookieParser(app);
-
+  setupOpenApi(app);
+  
   app.enableShutdownHooks();
   await startServer(app);
 

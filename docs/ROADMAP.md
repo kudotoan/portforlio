@@ -16,16 +16,16 @@ Quy ước trạng thái:
 - Validate biến môi trường bằng Joi.
 - Thiết lập bootstrap và shutdown hooks.
 
-## 2. Hạ tầng HTTP dùng chung — NEXT
+## 2. Hạ tầng HTTP dùng chung — PLANNED
 
 - Validation.- done
 - Request ID và logging. - done
 - Success/error response. - done
 - CORS, Helmet, cookie parser, rate limit. - done, rate limit tạm hoãn
-- Pagination dùng chung.
-- Thiết lập Swagger/OpenAPI.
+- Pagination dùng chung. - done
+- Thiết lập Swagger/OpenAPI. - done
 
-## 3. Database và Prisma — PLANNED
+## 3. Database và Prisma — NEXT
 
 - MySQL 8+.
 - PrismaService dùng chung.
