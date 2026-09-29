@@ -4,19 +4,19 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { ConfigurationModule } from '../../../config/config.module.js';
-import { PrismaModule } from '../../../database/prisma.module.js';
-import { PrismaService } from '../../../database/prisma.service.js';
-import type { AdminUser, RefreshTokenSession } from '../../../generated/prisma/client.js';
-import { AdminRole, RefreshTokenRevokedReason } from '../../../generated/prisma/enums.js';
-import { AuthModule } from '../auth.module.js';
-import { AuthErrorCode } from '../constants/auth-error-code.constant.js';
-import type { LoginResult, RefreshResult } from './auth.service.js';
-import { AuthService } from './auth.service.js';
-import { AccessTokenService } from './access-token.service.js';
-import { PasswordHasherService } from './password-hasher.service.js';
-import { RefreshTokenService } from './refresh-token.service.js';
-import type { AccessTokenPayload } from '../types/access-token-payload.type.js';
+import { ConfigurationModule } from '../../../../config/config.module.js';
+import { PrismaModule } from '../../../../database/prisma.module.js';
+import { PrismaService } from '../../../../database/prisma.service.js';
+import type { AdminUser, RefreshTokenSession } from '../../../../generated/prisma/client.js';
+import { AdminRole, RefreshTokenRevokedReason } from '../../../../generated/prisma/enums.js';
+import { AuthModule } from '../../auth.module.js';
+import { AuthErrorCode } from '../../constants/auth-error-code.constant.js';
+import type { LoginResult, RefreshResult } from '../../types/auth-service.type.js';
+import { AuthService } from '../../services/auth.service.js';
+import { AccessTokenService } from '../../services/access-token.service.js';
+import { PasswordHasherService } from '../../services/password-hasher.service.js';
+import { RefreshTokenService } from '../../services/refresh-token.service.js';
+import type { AccessTokenPayload } from '../../types/access-token-payload.type.js';
 
 describe('AuthService refresh integration', () => {
 
@@ -201,7 +201,7 @@ describe('AuthService refresh integration', () => {
     expect(savedOldSession?.lastUsedAt).not.toBeNull();
 
     const accessTokenPayload: AccessTokenPayload =
-      await accessTokenService.verifyAccessToken(refreshResult.response.accessToken);
+      await accessTokenService.verifyAccessToken(refreshResult.accessToken);
 
     expect(accessTokenPayload.sub).toBe(adminUser.id);
 
@@ -259,7 +259,7 @@ describe('AuthService refresh integration', () => {
 
   });
 
-  it('should reject replacement refresh token after family reuse detection', async () => {
+  it('should detect reuse of replacement refresh token after family revocation', async () => {
 
     const password: string = 'StrongPassword123!';
 
@@ -276,7 +276,7 @@ describe('AuthService refresh integration', () => {
 
     await expectUnauthorizedCode(
       authService.refresh(refreshResult.refreshToken),
-      AuthErrorCode.AUTH_UNAUTHORIZED,
+      AuthErrorCode.AUTH_REFRESH_TOKEN_REUSED,
     );
 
   });

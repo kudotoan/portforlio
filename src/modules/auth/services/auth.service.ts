@@ -4,41 +4,15 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 
 import { authConfig } from '../../../config/namespaces/auth.config.js';
-import type { AdminUser, RefreshTokenSession } from '../../../generated/prisma/client.js';
-import { AuthErrorCode } from './../constants/auth-error-code.constant.js';
-import type { LoginRequestDto } from './../dto/login-request.dto.js';
-import { AuthAdminResponse } from './../models/auth-admin-response.model.js';
-import { LoginResponse } from './../models/login-response.model.js';
-import { AuthRepository } from './../repositories/auth.repository.js';
+import { RefreshTokenRevokedReason } from '../../../generated/prisma/enums.js';
+import { AuthErrorCode } from '../constants/auth-error-code.constant.js';
+import type { AuthAdminUser } from '../models/admin-user.model.js';
+import type { AuthRefreshSession, AuthRefreshSessionWithAdmin } from '../models/refresh-session.model.js';
+import { AuthRepository } from '../repositories/auth.repository.js';
+import type { AuthAdminResult, LoginInput, LoginResult, RefreshResult } from '../types/auth-service.type.js';
 import { AccessTokenService } from './access-token.service.js';
 import { PasswordHasherService } from './password-hasher.service.js';
 import { RefreshTokenService } from './refresh-token.service.js';
-import { RefreshTokenRevokedReason } from '../../../generated/prisma/enums.js';
-import { RefreshResponse } from './../models//refresh-response.model.js';
-import type { RefreshTokenSessionWithAdmin } from './../repositories/auth.repository.js';
-
-export type LoginResult = {
-
-  response: LoginResponse;
-
-  refreshToken: string;
-
-  refreshTokenExpiresAt: Date;
-
-};
-
-export type RefreshResult = {
-
-  response: RefreshResponse;
-
-  refreshToken: string;
-
-  refreshTokenExpiresAt: Date;
-
-};
-
-
-
 @Injectable()
 export class AuthService {
 
@@ -52,11 +26,11 @@ export class AuthService {
 
   }
 
-  async login(request: LoginRequestDto): Promise<LoginResult> {
+  async login(input: LoginInput): Promise<LoginResult> {
 
-    const username: string = request.username.trim().toLowerCase();
+    const username: string = input.username.trim().toLowerCase();
 
-    const adminUser: AdminUser | null = await this.authRepository.findAdminByUsername(username);
+    const adminUser: AuthAdminUser | null = await this.authRepository.findAdminByUsername(username);
 
     if (adminUser === null) {
 
@@ -66,7 +40,7 @@ export class AuthService {
 
     const isPasswordValid: boolean = await this.passwordHasherService.verifyPassword(
       adminUser.passwordHash,
-      request.password,
+      input.password,
     );
 
     if (!isPasswordValid) {
@@ -105,7 +79,7 @@ export class AuthService {
 
     }
 
-    const refreshTokenSession: RefreshTokenSession = await this.authRepository.createLoginSession({
+    const refreshTokenSession: AuthRefreshSession = await this.authRepository.createLoginSession({
       adminUserId: adminUser.id,
       tokenHash: tokenHash,
       familyId: familyId,
@@ -118,7 +92,7 @@ export class AuthService {
       refreshTokenSession.id,
     );
 
-    const adminResponse: AuthAdminResponse = {
+    const admin: AuthAdminResult = {
 
       id: adminUser.id,
 
@@ -130,19 +104,13 @@ export class AuthService {
 
     };
 
-    const response: LoginResponse = {
+    const result: LoginResult = {
 
       accessToken: accessToken,
 
       expiresIn: this.configuration.accessTokenTtlSeconds,
 
-      admin: adminResponse,
-
-    };
-
-    const result: LoginResult = {
-
-      response: response,
+      admin: admin,
 
       refreshToken: refreshToken,
 
@@ -166,7 +134,7 @@ export class AuthService {
 
     }
 
-    const currentSession: RefreshTokenSessionWithAdmin | null =
+    const currentSession: AuthRefreshSessionWithAdmin | null =
         await this.authRepository.findSessionWithAdminById(session.id);
 
     if (currentSession === null) {
@@ -183,22 +151,13 @@ export class AuthService {
 
     const rotatedAt: Date = new Date();
 
-    if (
-        currentSession.revokedReason === RefreshTokenRevokedReason.ROTATED
-        || currentSession.replacedById !== null
-    ) {
+    if (this.isRefreshSessionRevoked(currentSession)) {
 
         await this.handleRefreshTokenReuse(
         currentSession.adminUserId,
         currentSession.familyId,
         rotatedAt,
         );
-
-    }
-
-    if (currentSession.revokedAt !== null) {
-
-        throw this.createUnauthorizedException();
 
     }
 
@@ -227,7 +186,7 @@ export class AuthService {
 
     }
 
-    const newSession: RefreshTokenSession | null =
+    const newSession: AuthRefreshSession | null =
         await this.authRepository.rotateRefreshSession({
         sessionId: currentSession.id,
         adminUserId: currentSession.adminUserId,
@@ -240,16 +199,10 @@ export class AuthService {
 
     if (newSession === null) {
 
-        const latestSession: RefreshTokenSessionWithAdmin | null =
+        const latestSession: AuthRefreshSessionWithAdmin | null =
         await this.authRepository.findSessionWithAdminById(currentSession.id);
 
-        if (
-        latestSession !== null
-        && (
-            latestSession.revokedReason === RefreshTokenRevokedReason.ROTATED
-            || latestSession.replacedById !== null
-        )
-        ) {
+        if (latestSession !== null && this.isRefreshSessionRevoked(latestSession)) {
 
         await this.handleRefreshTokenReuse(
             currentSession.adminUserId,
@@ -280,17 +233,11 @@ export class AuthService {
         newSession.id,
     );
 
-    const response: RefreshResponse = {
+    const result: RefreshResult = {
 
         accessToken: accessToken,
 
         expiresIn: this.configuration.accessTokenTtlSeconds,
-
-    };
-
-    const result: RefreshResult = {
-
-        response: response,
 
         refreshToken: newRefreshToken,
 
@@ -303,6 +250,14 @@ export class AuthService {
     }
 
     
+
+  private isRefreshSessionRevoked(session: AuthRefreshSession): boolean {
+
+    return session.revokedAt !== null
+      || session.revokedReason !== null
+      || session.replacedById !== null;
+
+  }
 
   private createInvalidCredentialsException(): UnauthorizedException {
 

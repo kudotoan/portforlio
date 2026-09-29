@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../../database/prisma.service.js';
-import { RefreshTokenRevokedReason, type AdminUser, type Prisma, type RefreshTokenSession } from '../../../generated/prisma/client.js';
+import { RefreshTokenRevokedReason, type AdminUser as PrismaAdminUser, type Prisma, type RefreshTokenSession as PrismaRefreshTokenSession } from '../../../generated/prisma/client.js';
+import type { AuthAdminUser } from '../models/admin-user.model.js';
+import type { AuthRefreshSession, AuthRefreshSessionWithAdmin } from '../models/refresh-session.model.js';
 
-export type RefreshTokenSessionWithAdmin = Prisma.RefreshTokenSessionGetPayload<{
+type PrismaRefreshSessionWithAdmin = Prisma.RefreshTokenSessionGetPayload<{
   include: {
     adminUser: true;
   };
@@ -80,33 +82,33 @@ export class AuthRepository {
 
   }
 
-  async findAdminByUsername(username: string): Promise<AdminUser | null> {
+  async findAdminByUsername(username: string): Promise<AuthAdminUser | null> {
 
-    const adminUser: AdminUser | null = await this.prisma.adminUser.findUnique({
+    const adminUser: PrismaAdminUser | null = await this.prisma.adminUser.findUnique({
       where: {
         username: username,
       },
     });
 
-    return adminUser;
+    return adminUser === null ? null : this.toAuthAdminUser(adminUser);
 
   }
 
-  async findSessionByTokenHash(tokenHash: string): Promise<RefreshTokenSession | null> {
+  async findSessionByTokenHash(tokenHash: string): Promise<AuthRefreshSession | null> {
 
-    const refreshTokenSession: RefreshTokenSession | null = await this.prisma.refreshTokenSession.findUnique({
+    const refreshTokenSession: PrismaRefreshTokenSession | null = await this.prisma.refreshTokenSession.findUnique({
       where: {
         tokenHash: tokenHash,
       },
     });
 
-    return refreshTokenSession;
+    return refreshTokenSession === null ? null : this.toAuthRefreshSession(refreshTokenSession);
 
   }
 
-  async findSessionWithAdminById(sessionId: string): Promise<RefreshTokenSessionWithAdmin | null> {
+  async findSessionWithAdminById(sessionId: string): Promise<AuthRefreshSessionWithAdmin | null> {
 
-    const refreshTokenSession: RefreshTokenSessionWithAdmin | null = await this.prisma.refreshTokenSession.findUnique({
+    const refreshTokenSession: PrismaRefreshSessionWithAdmin | null = await this.prisma.refreshTokenSession.findUnique({
       where: {
         id: sessionId,
       },
@@ -115,13 +117,20 @@ export class AuthRepository {
       },
     });
 
-    return refreshTokenSession;
+    if (refreshTokenSession === null) {
+      return null;
+    }
+
+    return {
+      ...this.toAuthRefreshSession(refreshTokenSession),
+      adminUser: this.toAuthAdminUser(refreshTokenSession.adminUser),
+    };
 
   }
 
-    async createLoginSession(input: CreateLoginSessionInput): Promise<RefreshTokenSession> {
+    async createLoginSession(input: CreateLoginSessionInput): Promise<AuthRefreshSession> {
 
-        const refreshTokenSession: RefreshTokenSession = await this.prisma.refreshTokenSession.create({
+        const refreshTokenSession: PrismaRefreshTokenSession = await this.prisma.refreshTokenSession.create({
             data: {
             adminUserId: input.adminUserId,
             tokenHash: input.tokenHash,
@@ -131,13 +140,13 @@ export class AuthRepository {
             },
         });
 
-        return refreshTokenSession;
+        return this.toAuthRefreshSession(refreshTokenSession);
 
     }
 
-    async rotateRefreshSession(input: RotateRefreshSessionInput): Promise<RefreshTokenSession | null> {
+    async rotateRefreshSession(input: RotateRefreshSessionInput): Promise<AuthRefreshSession | null> {
 
-        const replacementSession: RefreshTokenSession | null = await this.prisma.$transaction(async (transaction) => {
+        const replacementSession: PrismaRefreshTokenSession | null = await this.prisma.$transaction(async (transaction) => {
 
             const claimResult: Prisma.BatchPayload = await transaction.refreshTokenSession.updateMany({
             where: {
@@ -169,7 +178,7 @@ export class AuthRepository {
 
             }
 
-            const newSession: RefreshTokenSession = await transaction.refreshTokenSession.create({
+            const newSession: PrismaRefreshTokenSession = await transaction.refreshTokenSession.create({
             data: {
                 adminUserId: input.adminUserId,
                 tokenHash: input.newTokenHash,
@@ -192,7 +201,7 @@ export class AuthRepository {
 
         });
 
-        return replacementSession;
+        return replacementSession === null ? null : this.toAuthRefreshSession(replacementSession);
 
     }
 
@@ -257,5 +266,34 @@ export class AuthRepository {
 
         });
 
+    }
+
+    private toAuthAdminUser(row: PrismaAdminUser): AuthAdminUser {
+      return {
+        id: row.id,
+        username: row.username,
+        passwordHash: row.passwordHash,
+        role: row.role,
+        isActive: row.isActive,
+        mustChangePassword: row.mustChangePassword,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      };
+    }
+
+    private toAuthRefreshSession(row: PrismaRefreshTokenSession): AuthRefreshSession {
+      return {
+        id: row.id,
+        adminUserId: row.adminUserId,
+        tokenHash: row.tokenHash,
+        familyId: row.familyId,
+        familyExpiresAt: row.familyExpiresAt,
+        expiresAt: row.expiresAt,
+        revokedAt: row.revokedAt,
+        revokedReason: row.revokedReason,
+        replacedById: row.replacedById,
+        lastUsedAt: row.lastUsedAt,
+        createdAt: row.createdAt,
+      };
     }
 }

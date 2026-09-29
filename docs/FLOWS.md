@@ -77,11 +77,13 @@ set HttpOnly refresh cookie
 200
 ```
 
-Response:
+Response data:
 
 ```text
-{ accessToken, admin }
+{ accessToken, expiresIn, admin }
 ```
+
+`expiresIn` là thời hạn access token tính bằng giây, theo `JWT_ACCESS_TTL_SECONDS`.
 
 ## 4. Refresh token
 
@@ -132,6 +134,14 @@ set refresh cookie mới
 ```
 
 Mỗi lần rotation, `sid` thay đổi theo `RefreshTokenSession.id`; `familyId` giữ nguyên trong cùng một login session.
+
+Response data:
+
+```text
+{ accessToken, expiresIn }
+```
+
+`expiresIn` là thời hạn access token tính bằng giây, theo `JWT_ACCESS_TTL_SECONDS`.
 
 ## 5. Gọi Admin API
 

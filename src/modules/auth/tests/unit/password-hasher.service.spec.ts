@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { PasswordHasherService } from './password-hasher.service.js';
+import { PasswordHasherService } from '../../services/password-hasher.service.js';
 
 describe('PasswordHasherService', () => {
 

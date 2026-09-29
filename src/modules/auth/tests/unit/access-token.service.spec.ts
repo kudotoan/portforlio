@@ -7,8 +7,8 @@ import type { ConfigType } from '@nestjs/config';
 import { importPKCS8, SignJWT } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { authConfig } from '../../../config/namespaces/auth.config.js';
-import { AccessTokenService } from './access-token.service.js';
+import { authConfig } from '../../../../config/namespaces/auth.config.js';
+import { AccessTokenService } from '../../services/access-token.service.js';
 
 describe('AccessTokenService', () => {
 

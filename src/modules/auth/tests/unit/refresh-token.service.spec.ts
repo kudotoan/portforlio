@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { RefreshTokenService } from './refresh-token.service.js';
+import { RefreshTokenService } from '../../services/refresh-token.service.js';
 
 describe('RefreshTokenService', () => {
 

@@ -67,11 +67,13 @@ Quy ước:
 
 | Method | Path | Request | Response |
 |---|---|---|---|
-| POST | `/admin/auth/login` | `{ username, password }` | `{ accessToken, admin }` + refresh cookie |
-| POST | `/admin/auth/refresh` | Refresh cookie | `{ accessToken }` + refresh cookie mới |
+| POST | `/admin/auth/login` | `{ username, password }` | `{ accessToken, expiresIn, admin }` + refresh cookie |
+| POST | `/admin/auth/refresh` | Refresh cookie | `{ accessToken, expiresIn }` + refresh cookie mới |
 | POST | `/admin/auth/logout` | Refresh cookie | `204` |
 | GET | `/admin/auth/me` | Bearer | Admin session |
 | PATCH | `/admin/auth/change-password` | `{ currentPassword, newPassword }` | `204` |
+
+Các object trong cột Response của login và refresh là giá trị `data` trong success response. `expiresIn` là thời hạn access token tính bằng giây, theo `JWT_ACCESS_TTL_SECONDS`.
 
 ## 4. Media
 

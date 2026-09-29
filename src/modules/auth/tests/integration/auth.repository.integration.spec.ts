@@ -3,12 +3,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { ConfigurationModule } from '../../../config/config.module.js';
-import { PrismaModule } from '../../../database/prisma.module.js';
-import { PrismaService } from '../../../database/prisma.service.js';
-import type { AdminUser, RefreshTokenSession } from '../../../generated/prisma/client.js';
-import { AdminRole, RefreshTokenRevokedReason } from '../../../generated/prisma/enums.js';
-import { AuthRepository } from './auth.repository.js';
+import { ConfigurationModule } from '../../../../config/config.module.js';
+import { PrismaModule } from '../../../../database/prisma.module.js';
+import { PrismaService } from '../../../../database/prisma.service.js';
+import type { AdminUser, RefreshTokenSession } from '../../../../generated/prisma/client.js';
+import { AdminRole, RefreshTokenRevokedReason } from '../../../../generated/prisma/enums.js';
+import { AuthRepository } from '../../repositories/auth.repository.js';
 
 const DAY_IN_MILLISECONDS: number = 24 * 60 * 60 * 1000;
 
