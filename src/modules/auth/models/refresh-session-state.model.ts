@@ -1,15 +1,9 @@
 import type { RefreshTokenRevokedReason } from '../../../generated/prisma/enums.js';
 
-export type AuthRefreshSession = {
-  id: string;
-  adminUserId: string;
-  tokenHash: string;
-  familyId: string;
-  familyExpiresAt: Date;
+export type AuthRefreshSessionState = {
   expiresAt: Date;
+  familyExpiresAt: Date;
   revokedAt: Date | null;
   revokedReason: RefreshTokenRevokedReason | null;
   replacedById: string | null;
-  lastUsedAt: Date | null;
-  createdAt: Date;
 };

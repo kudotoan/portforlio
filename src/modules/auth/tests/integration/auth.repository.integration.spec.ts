@@ -8,6 +8,10 @@ import { PrismaModule } from '../../../../database/prisma.module.js';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import type { AdminUser, RefreshTokenSession } from '../../../../generated/prisma/client.js';
 import { AdminRole, RefreshTokenRevokedReason } from '../../../../generated/prisma/enums.js';
+import type { AuthAdminUser } from '../../models/admin-user.model.js';
+import type { AuthAccessSession } from '../../models/access-session.model.js';
+import type { AuthRefreshSessionContext } from '../../models/refresh-session-context.model.js';
+import type { AuthRefreshSessionState } from '../../models/refresh-session-state.model.js';
 import { AuthRepository } from '../../repositories/auth.repository.js';
 
 const DAY_IN_MILLISECONDS: number = 24 * 60 * 60 * 1000;
@@ -24,7 +28,7 @@ type CreateSessionOptions = {
 
 };
 
-describe('AuthRepository integration', () => {
+describe('AuthRepository integration', (): void => {
 
   let testingModule: TestingModule;
 
@@ -110,7 +114,7 @@ describe('AuthRepository integration', () => {
 
   }
 
-  beforeAll(async () => {
+  beforeAll(async (): Promise<void> => {
 
     testingModule = await Test.createTestingModule({
       imports: [ConfigurationModule, PrismaModule],
@@ -124,7 +128,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  afterEach(async () => {
+  afterEach(async (): Promise<void> => {
 
     if (createdAdminUserIds.length === 0) {
 
@@ -144,17 +148,17 @@ describe('AuthRepository integration', () => {
 
   });
 
-  afterAll(async () => {
+  afterAll(async (): Promise<void> => {
 
     await testingModule.close();
 
   });
 
-  it('should find admin user by username', async () => {
+  it('tim admin theo username', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
-    const foundAdminUser: AdminUser | null = await authRepository.findAdminByUsername(adminUser.username);
+    const foundAdminUser: AuthAdminUser | null = await authRepository.findAdminByUsername(adminUser.username);
 
     expect(foundAdminUser).not.toBeNull();
     expect(foundAdminUser?.id).toBe(adminUser.id);
@@ -162,15 +166,15 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should return null when admin username does not exist', async () => {
+  it('tra null khi username khong ton tai', async (): Promise<void> => {
 
-    const adminUser: AdminUser | null = await authRepository.findAdminByUsername(`missing-${randomUUID()}`);
+    const adminUser: AuthAdminUser | null = await authRepository.findAdminByUsername(`missing-${randomUUID()}`);
 
     expect(adminUser).toBeNull();
 
   });
 
-  it('should find refresh session by token hash', async () => {
+  it('tim refresh context theo token hash va chi tra truong can thiet', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -180,31 +184,44 @@ describe('AuthRepository integration', () => {
       tokenHash: tokenHash,
     });
 
-    const foundSession: RefreshTokenSession | null = await authRepository.findSessionByTokenHash(tokenHash);
+    const foundSession: AuthRefreshSessionContext | null = await authRepository.findRefreshSessionByTokenHash(tokenHash);
 
     expect(foundSession).not.toBeNull();
     expect(foundSession?.id).toBe(session.id);
-    expect(foundSession?.tokenHash).toBe(tokenHash);
+    expect(foundSession).toEqual({
+      id: session.id,
+      adminUserId: adminUser.id,
+      familyId: session.familyId,
+      familyExpiresAt: session.familyExpiresAt,
+      expiresAt: session.expiresAt,
+      revokedAt: null,
+      revokedReason: null,
+      replacedById: null,
+      adminUser: { isActive: true },
+    });
 
   });
 
-  it('should find refresh session with admin user by session id', async () => {
+  it('tim trang thai refresh theo id va chi tra nam truong', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
     const session: RefreshTokenSession = await createSession(adminUser.id);
 
-    const foundSession = await authRepository.findSessionWithAdminById(session.id);
+    const foundSession: AuthRefreshSessionState | null = await authRepository.findRefreshSessionStateById(session.id);
 
     expect(foundSession).not.toBeNull();
-    expect(foundSession?.id).toBe(session.id);
-    expect(foundSession?.adminUser.id).toBe(adminUser.id);
-    expect(foundSession?.adminUser.username).toBe(adminUser.username);
-    expect(foundSession?.adminUser.role).toBe(AdminRole.OWNER);
+    expect(foundSession).toEqual({
+      expiresAt: session.expiresAt,
+      familyExpiresAt: session.familyExpiresAt,
+      revokedAt: null,
+      revokedReason: null,
+      replacedById: null,
+    });
 
   });
 
-  it('should create login session', async () => {
+  it('tao login session va tra model day du', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -247,7 +264,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should rotate refresh session', async () => {
+  it('rotate refresh session va tra model day du', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -310,7 +327,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should reject rotation when session is already revoked', async () => {
+  it('tu choi rotation khi session da thu hoi', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -342,7 +359,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should reject rotation when idle session has expired', async () => {
+  it('tu choi rotation khi session da het han', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -367,7 +384,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should reject rotation when family has expired', async () => {
+  it('tu choi rotation khi family da het han', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -392,7 +409,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should allow only one concurrent refresh rotation', async () => {
+  it('chi cho phep mot rotation dong thoi thanh cong', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -457,7 +474,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should revoke active sessions in one family without changing another family', async () => {
+  it('thu hoi session cua dung family', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser();
 
@@ -531,7 +548,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should revoke all active sessions for one admin user only', async () => {
+  it('thu hoi session cua dung admin', async (): Promise<void> => {
 
     const firstAdminUser: AdminUser = await createAdminUser();
     const secondAdminUser: AdminUser = await createAdminUser();
@@ -576,7 +593,7 @@ describe('AuthRepository integration', () => {
 
   });
 
-  it('should change password and revoke all active sessions in one transaction', async () => {
+  it('doi mat khau va thu hoi session trong mot transaction', async (): Promise<void> => {
 
     const adminUser: AdminUser = await createAdminUser(true);
 
@@ -620,6 +637,36 @@ describe('AuthRepository integration', () => {
 
     expect(secondSavedSession?.revokedAt?.getTime()).toBe(changedAt.getTime());
     expect(secondSavedSession?.revokedReason).toBe(RefreshTokenRevokedReason.PASSWORD_CHANGED);
+
+  });
+
+  it('tim access context theo session id', async (): Promise<void> => {
+
+    const adminUser: AdminUser = await createAdminUser(true);
+
+    const session: RefreshTokenSession =
+      await createSession(adminUser.id);
+
+    const accessSession: AuthAccessSession | null =
+      await authRepository.findAccessSessionById(session.id);
+
+    expect(accessSession).not.toBeNull();
+
+    expect(accessSession?.id).toBe(session.id);
+    expect(accessSession?.adminUserId).toBe(adminUser.id);
+
+    expect(accessSession?.revokedAt).toBeNull();
+    expect(accessSession?.revokedReason).toBeNull();
+    expect(accessSession?.replacedById).toBeNull();
+
+    expect(accessSession?.adminUser.id).toBe(adminUser.id);
+    expect(accessSession?.adminUser.username).toBe(adminUser.username);
+    expect(accessSession?.adminUser.role).toBe(AdminRole.OWNER);
+    expect(accessSession?.adminUser.isActive).toBe(true);
+    expect(accessSession?.adminUser.mustChangePassword).toBe(true);
+    expect(accessSession).not.toHaveProperty('familyId');
+    expect(accessSession).not.toHaveProperty('tokenHash');
+    expect(accessSession?.adminUser).not.toHaveProperty('passwordHash');
 
   });
 

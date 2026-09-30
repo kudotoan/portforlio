@@ -7,6 +7,4 @@ export type AuthAdminUser = {
   role: AdminRole;
   isActive: boolean;
   mustChangePassword: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 };
