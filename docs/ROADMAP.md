@@ -87,8 +87,8 @@ Quy ước trạng thái:
 3. repository + transaction — DONE
 4. login — DONE
 5. refresh rotation + reuse detection — DONE
-6. JWT/current-admin/role/password guards - NEXT
-7. me/change-password/logout/deactivation
+6. JWT/current-admin/role/password guards — DONE
+7. me/change-password/logout/deactivation - NEXT
 8. origin-CSRF + security tests
 
 ## 7. Media — PLANNED

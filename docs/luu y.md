@@ -1,0 +1,2 @@
+- Trình duyệt gọi 5 API 1 lúc khi access token hết hạn cũng chỉ gọi refresh 1 lần duy nhất. Tránh tự đá mình khỏi server.
+-
