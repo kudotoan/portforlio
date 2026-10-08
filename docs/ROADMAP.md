@@ -89,7 +89,26 @@ Quy ước trạng thái:
 5. refresh rotation + reuse detection — DONE
 6. JWT/current-admin/role/password guards — DONE
 7. me/change-password/logout/deactivation - NEXT
+7.1 GET /admin/auth/me
+7.2 POST /admin/auth/change-password
+7.3 POST /admin/auth/logout
+7.4 xử lý Admin bị deactivate / revoke session
+7.5 tests
 8. origin-CSRF + security tests
+
+## 7. Admin Management — PLANNED
+1. Hoàn thiện API contract quản lý Admin.
+2. POST  /admin/users                 — Tạo Admin
+3. GET   /admin/users                 — Danh sách Admin
+4. GET   /admin/users/:id             — Chi tiết Admin
+5. PATCH /admin/users/:id             — Cập nhật role/trạng thái Chức năng vô hiệu hóa sẽ được triển khai trong PATCH /admin/users/:id.
+6. POST  /admin/users/:id/reset-password — Reset mật khẩu
+7. Chỉ OWNER có quyền quản lý Admin.
+8. Không vô hiệu hóa/hạ quyền OWNER cuối cùng đang active.
+9. Khi vô hiệu hóa Admin, revoke toàn bộ session.
+10. Khi reset mật khẩu, yêu cầu đổi mật khẩu ở lần đăng nhập tiếp theo.
+11. Unit test + integration test + security test.
+
 
 ## 7. Media — PLANNED
 
@@ -209,48 +228,3 @@ Quy ước trạng thái:
 - Rollback strategy.
 - Object storage backup/lifecycle nếu cần.
 
-## 15. Thứ tự triển khai hiện tại
-
-```text
-Database + Prisma
-  ↓
-Health
-  ↓
-Seed
-  ↓
-Authentication + Authorization
-  ↓
-Media
-  ↓
-Category + Artwork
-  ↓
-Profile + Gallery
-  ↓
-Analytics + Dashboard
-  ↓
-Background Jobs
-  ↓
-Rà soát API
-  ↓
-Kiểm thử tổng thể
-  ↓
-Production
-```
-
-Bước đang thực hiện:
-
-```text
-3. Database và Prisma
-```
-
-Việc tiếp theo:
-
-```text
-tạo PrismaService
-  ↓
-viết schema.prisma từ DATA_MODEL.md
-  ↓
-tạo migration đầu tiên
-  ↓
-kiểm tra migration trên database sạch
-```

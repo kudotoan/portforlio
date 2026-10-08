@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 
 import { authConfig } from '../../../config/namespaces/auth.config.js';
@@ -12,6 +12,7 @@ import type { AuthRefreshSessionContext } from '../models/refresh-session-contex
 import type { AuthRefreshSessionState } from '../models/refresh-session-state.model.js';
 import { AuthRepository } from '../repositories/auth.repository.js';
 import type {
+  ChangePasswordInput,
   LoginInput,
   LoginResult,
   RefreshResult,
@@ -135,6 +136,76 @@ export class AuthService {
     };
   }
 
+   public async changePassword(
+    input: ChangePasswordInput,
+  ): Promise<void> {
+    const adminUser: AuthAdminUser | null =
+      await this.authRepository.findAdminByUsername(
+        input.username,
+      );
+
+    if (
+      adminUser === null
+      || adminUser.id !== input.adminUserId
+      || !adminUser.isActive
+    ) {
+      throw this.createUnauthorizedException();
+    }
+
+    const isCurrentPasswordValid: boolean =
+      await this.passwordHasherService.verifyPassword(
+        adminUser.passwordHash,
+        input.currentPassword,
+      );
+
+    if (!isCurrentPasswordValid) {
+      throw this.createInvalidCredentialsException();
+    }
+
+    if (input.currentPassword === input.newPassword) {
+      throw new BadRequestException({
+        code: 'VALIDATION_FAILED',
+        message: 'New password must differ from current password.',
+      });
+    }
+
+    const newPasswordHash: string =
+      await this.passwordHasherService.hashPassword(
+        input.newPassword,
+      );
+
+    const isChanged: boolean =
+      await this.authRepository.changePasswordAndRevokeSessions({
+        adminUserId: adminUser.id,
+        expectedPasswordHash: adminUser.passwordHash,
+        newPasswordHash: newPasswordHash,
+        changedAt: new Date(),
+      });
+
+    if (!isChanged) {
+      throw this.createUnauthorizedException();
+    }
+  }
+
+  public async logout(refreshToken: string): Promise<void> {
+    const tokenHash: string =
+      this.refreshTokenService.hashRefreshToken(refreshToken);
+
+    const session: AuthRefreshSessionContext | null =
+      await this.authRepository.findRefreshSessionByTokenHash(tokenHash);
+
+    if (session === null) {
+      return;
+    }
+
+    await this.authRepository.revokeFamily({
+      adminUserId: session.adminUserId,
+      familyId: session.familyId,
+      revokedAt: new Date(),
+      revokedReason: RefreshTokenRevokedReason.LOGOUT,
+    });
+  }
+
   private calculateSessionExpiresAt(now: Date, familyExpiresAt: Date): Date {
     const idleExpiresAt: number =
       now.getTime() + this.configuration.refreshIdleTtlSeconds * 1000;
@@ -233,4 +304,6 @@ export class AuthService {
       message: 'Session expired.',
     });
   }
+
+ 
 }

@@ -33,6 +33,12 @@ export type RevokeAllAdminSessionsInput = {
 
 export type ChangePasswordAndRevokeSessionsInput = {
   adminUserId: string;
+  expectedPasswordHash: string;
   newPasswordHash: string;
   changedAt: Date;
 };
+
+export type DeactivateAdminResult =
+  | 'DEACTIVATED'
+  | 'NOT_FOUND'
+  | 'LAST_ACTIVE_OWNER';

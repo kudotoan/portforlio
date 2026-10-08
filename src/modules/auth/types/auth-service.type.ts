@@ -24,3 +24,10 @@ export type RefreshResult = {
   refreshToken: string;
   refreshTokenExpiresAt: Date;
 };
+
+export type ChangePasswordInput = {
+  adminUserId: string;
+  username: string;
+  currentPassword: string;
+  newPassword: string;
+};

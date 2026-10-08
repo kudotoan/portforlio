@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../../database/prisma.service.js';
 import {
+  AdminRole,
+  Prisma,
   RefreshTokenRevokedReason,
-  type Prisma,
 } from '../../../generated/prisma/client.js';
 import type { AuthAccessSession } from '../models/access-session.model.js';
 import type { AuthAdminUser } from '../models/admin-user.model.js';
@@ -17,7 +18,9 @@ import type {
   RevokeFamilyInput,
   RotateRefreshSessionInput,
 } from '../types/auth-repository.type.js';
-
+import type {
+  DeactivateAdminResult,
+} from '../types/auth-repository.type.js';
 const adminCredentialsSelect = {
   id: true,
   username: true,
@@ -221,26 +224,107 @@ export class AuthRepository {
     return result.count;
   }
 
-  public async changePasswordAndRevokeSessions(input: ChangePasswordAndRevokeSessionsInput): Promise<void> {
-    await this.prisma.$transaction(
-      async (transaction: Prisma.TransactionClient): Promise<void> => {
-        await transaction.adminUser.update({
-          where: { id: input.adminUserId },
-          data: {
-            passwordHash: input.newPasswordHash,
-            mustChangePassword: false,
-          },
-          select: { id: true },
-        });
+  public async changePasswordAndRevokeSessions(
+    input: ChangePasswordAndRevokeSessionsInput,
+  ): Promise<boolean> {
+    return this.prisma.$transaction(
+      async (
+        transaction: Prisma.TransactionClient,
+      ): Promise<boolean> => {
+        const updateResult: Prisma.BatchPayload =
+          await transaction.adminUser.updateMany({
+            where: {
+              id: input.adminUserId,
+              passwordHash: input.expectedPasswordHash,
+              isActive: true,
+            },
+            data: {
+              passwordHash: input.newPasswordHash,
+              mustChangePassword: false,
+            },
+          });
+
+        if (updateResult.count !== 1) {
+          return false;
+        }
 
         await transaction.refreshTokenSession.updateMany({
-          where: { adminUserId: input.adminUserId, revokedAt: null },
+          where: {
+            adminUserId: input.adminUserId,
+            revokedAt: null,
+          },
           data: {
             revokedAt: input.changedAt,
             revokedReason: RefreshTokenRevokedReason.PASSWORD_CHANGED,
           },
         });
+
+        return true;
       },
     );
   }
+
+
+  public async deactivateAdminAndRevokeSessions(
+    adminUserId: string,
+  ): Promise<DeactivateAdminResult> {
+    return this.prisma.$transaction(
+      async (
+        transaction: Prisma.TransactionClient,
+      ): Promise<DeactivateAdminResult> => {
+        const adminUser = await transaction.adminUser.findUnique({
+          where: { id: adminUserId },
+          select: {
+            id: true,
+            role: true,
+            isActive: true,
+          },
+        });
+
+        if (adminUser === null) {
+          return 'NOT_FOUND';
+        }
+
+        if (adminUser.isActive && adminUser.role === AdminRole.OWNER) {
+          const activeOwnerCount: number =
+            await transaction.adminUser.count({
+              where: {
+                role: AdminRole.OWNER,
+                isActive: true,
+              },
+            });
+
+          if (activeOwnerCount <= 1) {
+            return 'LAST_ACTIVE_OWNER';
+          }
+        }
+
+        const disabledAt: Date = new Date();
+
+        if (adminUser.isActive) {
+          await transaction.adminUser.update({
+            where: { id: adminUserId },
+            data: { isActive: false },
+          });
+        }
+
+        await transaction.refreshTokenSession.updateMany({
+          where: {
+            adminUserId: adminUserId,
+            revokedAt: null,
+          },
+          data: {
+            revokedAt: disabledAt,
+            revokedReason: RefreshTokenRevokedReason.ADMIN_DISABLED,
+          },
+        });
+
+        return 'DEACTIVATED';
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  }
+
 }

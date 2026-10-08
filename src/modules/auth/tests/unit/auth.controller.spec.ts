@@ -7,7 +7,8 @@ import { authConfig } from '../../../../config/namespaces/auth.config.js';
 import { AuthController } from '../../auth.controller.js';
 import { AuthErrorCode } from '../../constants/auth-error-code.constant.js';
 import { AuthService } from '../../services/auth.service.js';
-
+import { AdminRole } from '../../../../generated/prisma/enums.js';
+import type { CurrentAdmin } from '../../models/current-admin.model.js';
 function createController() {
   const refresh = vi.fn();
   const clearCookie = vi.fn();
@@ -59,6 +60,37 @@ describe('AuthController refresh cookie', () => {
     expect(cookie).not.toHaveBeenCalled();
     expect(setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
     expect(setHeader).toHaveBeenCalledWith('Pragma', 'no-cache');
+  });
+
+
+  it('tra thong tin admin hien tai va khong cho cache', () => {
+    const { controller, response, setHeader } = createController();
+
+    const currentAdmin: CurrentAdmin = {
+      id: 'admin-id',
+      username: 'owner',
+      role: AdminRole.OWNER,
+      mustChangePassword: true,
+    };
+
+    const result = controller.getMe(currentAdmin, response);
+
+    expect(result).toEqual({
+      id: 'admin-id',
+      username: 'owner',
+      role: AdminRole.OWNER,
+      mustChangePassword: true,
+    });
+
+    expect(setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'no-store',
+    );
+
+    expect(setHeader).toHaveBeenCalledWith(
+      'Pragma',
+      'no-cache',
+    );
   });
 
   it('sets a new cookie and returns the refreshed access token', async () => {
