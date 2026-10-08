@@ -9,10 +9,11 @@ import { AuthService } from './services/auth.service.js';
 import { AuthenticationGuard } from './guards/authentication.guard.js';
 import { PasswordChangeGuard } from './guards/password-change.guard.js';
 import { AuthorizationGuard } from './guards/authorization.guard.js';
+import { OriginGuard } from './guards/origin.guard.js';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthRepository, AuthService, PasswordHasherService, AccessTokenService, RefreshTokenService, AuthenticationGuard, PasswordChangeGuard, AuthorizationGuard],
+  providers: [AuthRepository, AuthService, PasswordHasherService, AccessTokenService, RefreshTokenService, AuthenticationGuard, PasswordChangeGuard, AuthorizationGuard,OriginGuard],
   exports: [AuthRepository, AuthService, PasswordHasherService, AccessTokenService, RefreshTokenService,AuthenticationGuard, PasswordChangeGuard, AuthorizationGuard],
 })
 export class AuthModule {

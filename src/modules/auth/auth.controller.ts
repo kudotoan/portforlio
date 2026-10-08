@@ -16,6 +16,7 @@ import { AuthAdminResponseDto } from './dto/response/auth-admin-response.dto.js'
 import { AuthenticationGuard } from './guards/authentication.guard.js';
 import type { CurrentAdmin as CurrentAdminModel } from './models/current-admin.model.js';
 import { ChangePasswordRequestDto } from './dto/request/change-password-request.dto.js';
+import { OriginGuard } from './guards/origin.guard.js';
 @Controller('admin/auth')
 export class AuthController {
   constructor(
@@ -25,6 +26,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(OriginGuard)
   async login(
     @Body() request: LoginRequestDto,
     @Res({ passthrough: true }) response: Response,
@@ -63,6 +65,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(OriginGuard)
   async refresh(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
@@ -164,6 +167,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(OriginGuard)
   public async logout(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
